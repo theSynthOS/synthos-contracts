@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "./PolicyRegistry.sol";
 
 /**
  * @title AgentRegistry
@@ -67,6 +68,12 @@ contract AgentRegistry {
     error EmptyDescription();
     error InvalidIndex();
 
+    PolicyRegistry public policyRegistry;
+
+    constructor(address _policyRegistry) {
+        policyRegistry = PolicyRegistry(_policyRegistry);
+    }
+
     /**
      * @notice Register a new agent with execution fee and AVS policies
      * @param dockerfileHash Hash of the agent's Dockerfile
@@ -91,6 +98,9 @@ contract AgentRegistry {
             revert AgentAlreadyRegistered(dockerfileHash);
         if (executionFee == 0) revert InvalidExecutionFee();
         if (avsPolicies.length == 0) revert EmptyAVSPolicies();
+
+        // Verify all policies are valid and active
+        policyRegistry.verifyPolicies(avsPolicies);
 
         // Register the agent
         agents[dockerfileHash] = Agent({
@@ -262,5 +272,31 @@ contract AgentRegistry {
         }
 
         return hashes;
+    }
+
+    /**
+     * @notice Add new function to validate actions against policies
+     * @param dockerfileHash Hash of the agent's Dockerfile
+     * @param actionData Encoded action data to validate
+     * @return bool True if action is valid according to all policies
+     */
+    function validateAgentAction(
+        string calldata dockerfileHash,
+        bytes calldata actionData
+    ) external view returns (bool) {
+        Agent memory agent = agents[dockerfileHash];
+        if (!agent.isRegistered) revert AgentNotRegistered();
+
+        // Check against each policy
+        for (uint256 i = 0; i < agent.avsPolicies.length; i++) {
+            address policyAddr = agent.avsPolicies[i];
+            (bool valid, string memory reason) = IPolicy(policyAddr)
+                .validateAction(dockerfileHash, actionData);
+            if (!valid) {
+                revert(reason);
+            }
+        }
+
+        return true;
     }
 }
