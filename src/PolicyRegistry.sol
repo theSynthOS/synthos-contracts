@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin-contracts-5.2.0/access/AccessControl.sol";
+import "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
 
 /**
  * @title PolicyRegistry

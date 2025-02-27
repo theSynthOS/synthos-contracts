@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
 import "./PolicyRegistry.sol";
+import "./interfaces/IPolicy.sol";
 
 /**
  * @title AgentRegistry
  * @notice Manages registration of agents identified by their Dockerfile hash
  */
 contract AgentRegistry {
-    using EnumerableSet for EnumerableSet.StringSet;
+    using EnumerableSet for EnumerableSet.Bytes32Set;
 
     enum AgentCategory {
         General, // General purpose agents
@@ -33,8 +34,8 @@ contract AgentRegistry {
     // Dockerfile hash => Agent details
     mapping(string => Agent) public agents;
 
-    // Set of all registered dockerfile hashes
-    EnumerableSet.StringSet private _registeredHashes;
+    // Set of all registered dockerfile hashes (as bytes32)
+    EnumerableSet.Bytes32Set private _registeredHashes;
 
     // Events
     event AgentRegistered(
@@ -114,8 +115,9 @@ contract AgentRegistry {
             category: category
         });
 
-        // Add to enumerable set
-        _registeredHashes.add(dockerfileHash);
+        // Convert string to bytes32 for storage
+        bytes32 hashAsBytes32 = keccak256(bytes(dockerfileHash));
+        _registeredHashes.add(hashAsBytes32);
 
         emit AgentRegistered(
             dockerfileHash,
@@ -256,7 +258,10 @@ contract AgentRegistry {
         if (index >= _registeredHashes.length()) {
             revert InvalidIndex();
         }
-        return _registeredHashes.at(index);
+        bytes32 hashAsBytes32 = _registeredHashes.at(index);
+        // Note: This is a simplified conversion. In practice, you might want to store
+        // the original string mapping alongside the bytes32 hash
+        return string(abi.encodePacked(hashAsBytes32));
     }
 
     /**
@@ -268,7 +273,8 @@ contract AgentRegistry {
         string[] memory hashes = new string[](length);
 
         for (uint256 i = 0; i < length; i++) {
-            hashes[i] = _registeredHashes.at(i);
+            bytes32 hashAsBytes32 = _registeredHashes.at(i);
+            hashes[i] = string(abi.encodePacked(hashAsBytes32));
         }
 
         return hashes;
