@@ -77,11 +77,8 @@ contract AgentRegistryTest is Test {
         console.log("=== Register Agent ===");
         console.log("Hash:", dockerfileHash);
         console.log("Fee:", executionFee);
-        console.log("Policy Count:", policies.length);
-        console.log("First Policy:", policies[0]);
         console.log("Location:", location);
         console.log("Description:", description);
-        console.log("Category:", uint(category));
 
         vm.expectEmit(true, true, false, true);
         emit AgentRegistered(

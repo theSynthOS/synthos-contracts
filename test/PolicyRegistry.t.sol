@@ -32,7 +32,6 @@ contract PolicyRegistryTest is Test {
     event PolicyReactivated(address indexed implementation);
 
     function setUp() public {
-        console.log("=== Setup ===");
         admin = makeAddr("admin");
         creator = makeAddr("creator");
         user = makeAddr("user");
@@ -41,6 +40,7 @@ contract PolicyRegistryTest is Test {
         policyRegistry = new PolicyRegistry();
         mockPolicy = new MockPolicy();
 
+        // Grant creator role to creator address
         policyRegistry.grantRole(policyRegistry.POLICY_CREATOR_ROLE(), creator);
         vm.stopPrank();
     }
