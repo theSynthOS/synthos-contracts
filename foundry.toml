@@ -2,6 +2,9 @@
 src = "src"
 out = "out"
 libs = ["lib", "dependencies"]
+solc-optimizer = true
+solc-optimizer-runs = 200
+viaIR = true
 remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "ds-test/=lib/forge-std/lib/ds-test/src/",
@@ -12,4 +15,6 @@ remappings = [
 forge-std = "1.9.6"
 "@openzeppelin-contracts" = "5.2.0"
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+[etherscan]
+sepolia = { key = "CBTKPBT7ZHVZ3QEKT761YUTDAFYDUGEUTE", url = "https://api-sepolia.etherscan.io/api" }
+scroll-sepolia = { key = "YD4SSI87D8CE61VG5STXQAAWVR2WF8DYPY", url = "https://api-sepolia.scrollscan.com/api" }
