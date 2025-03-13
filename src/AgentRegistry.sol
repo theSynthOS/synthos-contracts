@@ -23,7 +23,7 @@ contract AgentRegistry {
     struct Agent {
         address owner;
         uint256 executionFee;
-        address[] avsPolicies;
+        uint256[] policyIds;
         bool isRegistered;
         string dockerfileHash;
         string agentLocation; // URL/IPFS hash where agent is hosted
@@ -47,10 +47,7 @@ contract AgentRegistry {
         AgentCategory category
     );
     event AgentUpdated(string indexed dockerfileHash, uint256 newExecutionFee);
-    event AVSPoliciesUpdated(
-        string indexed dockerfileHash,
-        address[] avsPolicies
-    );
+    event PolicyIdsUpdated(string indexed dockerfileHash, uint256[] policyIds);
     event AgentMetadataUpdated(
         string indexed dockerfileHash,
         string newLocation,
@@ -63,7 +60,7 @@ contract AgentRegistry {
     error AgentNotRegistered();
     error NotAgentOwner();
     error InvalidExecutionFee();
-    error EmptyAVSPolicies();
+    error EmptyPolicyIds();
     error EmptyDockerfileHash();
     error EmptyAgentLocation();
     error EmptyDescription();
@@ -76,10 +73,10 @@ contract AgentRegistry {
     }
 
     /**
-     * @notice Register a new agent with execution fee and AVS policies
+     * @notice Register a new agent with execution fee and policy IDs
      * @param dockerfileHash Hash of the agent's Dockerfile
      * @param executionFee Fee to be charged for each agent execution, in wei
-     * @param avsPolicies Array of AVS policy contract addresses
+     * @param policyIds Array of policy IDs from the PolicyRegistry
      * @param agentLocation URL/IPFS hash where agent is hosted
      * @param description Brief description of the agent
      * @param category Category the agent belongs to
@@ -87,7 +84,7 @@ contract AgentRegistry {
     function registerAgent(
         string calldata dockerfileHash,
         uint256 executionFee,
-        address[] calldata avsPolicies,
+        uint256[] calldata policyIds,
         string calldata agentLocation,
         string calldata description,
         AgentCategory category
@@ -98,16 +95,16 @@ contract AgentRegistry {
         if (agents[dockerfileHash].isRegistered)
             revert AgentAlreadyRegistered(dockerfileHash);
         if (executionFee == 0) revert InvalidExecutionFee();
-        if (avsPolicies.length == 0) revert EmptyAVSPolicies();
+        if (policyIds.length == 0) revert EmptyPolicyIds();
 
         // Verify all policies are valid and active
-        policyRegistry.verifyPolicies(avsPolicies);
+        policyRegistry.verifyPolicies(policyIds);
 
         // Register the agent
         agents[dockerfileHash] = Agent({
             owner: msg.sender,
             executionFee: executionFee,
-            avsPolicies: avsPolicies,
+            policyIds: policyIds,
             isRegistered: true,
             dockerfileHash: dockerfileHash,
             agentLocation: agentLocation,
@@ -153,13 +150,13 @@ contract AgentRegistry {
     }
 
     /**
-     * @notice Update agent's AVS policies
+     * @notice Update agent's policy IDs
      * @param dockerfileHash Hash of the agent's Dockerfile
-     * @param newAVSPolicies New array of AVS policy contract addresses
+     * @param newPolicyIds New array of policy IDs
      */
-    function updateAVSPolicies(
+    function updatePolicyIds(
         string calldata dockerfileHash,
-        address[] calldata newAVSPolicies
+        uint256[] calldata newPolicyIds
     ) external {
         if (!agents[dockerfileHash].isRegistered) {
             revert AgentNotRegistered();
@@ -167,12 +164,15 @@ contract AgentRegistry {
         if (msg.sender != agents[dockerfileHash].owner) {
             revert NotAgentOwner();
         }
-        if (newAVSPolicies.length == 0) {
-            revert EmptyAVSPolicies();
+        if (newPolicyIds.length == 0) {
+            revert EmptyPolicyIds();
         }
 
-        agents[dockerfileHash].avsPolicies = newAVSPolicies;
-        emit AVSPoliciesUpdated(dockerfileHash, newAVSPolicies);
+        // Verify all policies are valid and active
+        policyRegistry.verifyPolicies(newPolicyIds);
+
+        agents[dockerfileHash].policyIds = newPolicyIds;
+        emit PolicyIdsUpdated(dockerfileHash, newPolicyIds);
     }
 
     /**
@@ -218,7 +218,7 @@ contract AgentRegistry {
         returns (
             address owner,
             uint256 executionFee,
-            address[] memory avsPolicies,
+            uint256[] memory policyIds,
             bool isRegistered,
             string memory agentDockerfileHash,
             string memory agentLocation,
@@ -230,7 +230,7 @@ contract AgentRegistry {
         return (
             agent.owner,
             agent.executionFee,
-            agent.avsPolicies,
+            agent.policyIds,
             agent.isRegistered,
             agent.dockerfileHash,
             agent.agentLocation,
@@ -278,31 +278,5 @@ contract AgentRegistry {
         }
 
         return hashes;
-    }
-
-    /**
-     * @notice Add new function to validate actions against policies
-     * @param dockerfileHash Hash of the agent's Dockerfile
-     * @param actionData Encoded action data to validate
-     * @return bool True if action is valid according to all policies
-     */
-    function validateAgentAction(
-        string calldata dockerfileHash,
-        bytes calldata actionData
-    ) external view returns (bool) {
-        Agent memory agent = agents[dockerfileHash];
-        if (!agent.isRegistered) revert AgentNotRegistered();
-
-        // Check against each policy
-        for (uint256 i = 0; i < agent.avsPolicies.length; i++) {
-            address policyAddr = agent.avsPolicies[i];
-            (bool valid, string memory reason) = IPolicy(policyAddr)
-                .validateAction(dockerfileHash, actionData);
-            if (!valid) {
-                revert(reason);
-            }
-        }
-
-        return true;
     }
 }
