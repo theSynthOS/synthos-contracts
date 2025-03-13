@@ -3,6 +3,8 @@ pragma solidity 0.8.28;
 
 import "./AgentRegistry.sol";
 import "./PolicyRegistry.sol";
+import {IMessageRecipient} from "hyperlane-core-v5.0.0/contracts/interfaces/IMessageRecipient.sol";
+import {TypeCasts} from "hyperlane-core-v5.0.0/contracts/libs/TypeCasts.sol";
 
 /**
  * @title PolicyCoordinator
@@ -12,10 +14,10 @@ import "./PolicyRegistry.sol";
  *      their registered policies. Ensures all actions comply with time,
  *      function, and resource constraints.
  *
- * @custom:security-contact security@synthos.io
- * @custom:version 1.0.0
  */
-contract PolicyCoordinator {
+contract PolicyCoordinator is IMessageRecipient {
+    using TypeCasts for bytes32;
+
     AgentRegistry public agentRegistry;
     PolicyRegistry public policyRegistry;
 
@@ -37,10 +39,28 @@ contract PolicyCoordinator {
         bytes32 indexed safeTxHash,
         bool isValid
     );
+    event TaskDataReceived(
+        string proofOfTask,
+        string taskData,
+        uint256 taskDefinitionId
+    );
 
-    constructor(address _agentRegistry, address _policyRegistry) {
+    // Add Hyperlane mailbox
+    address public immutable mailbox;
+
+    // Add allowed origin domain (Base)
+    uint32 public immutable originDomain;
+
+    constructor(
+        address _agentRegistry,
+        address _policyRegistry,
+        address _mailbox,
+        uint32 _originDomain
+    ) {
         agentRegistry = AgentRegistry(_agentRegistry);
         policyRegistry = PolicyRegistry(_policyRegistry);
+        mailbox = _mailbox;
+        originDomain = _originDomain;
     }
 
     /**
@@ -53,11 +73,11 @@ contract PolicyCoordinator {
      * @return reason Explanation of validation result
      */
     function validateTransaction(
-        string calldata dockerfileHash,
+        string memory dockerfileHash,
         address targetAddress,
         bytes4 functionSignature,
         uint256 executionTime
-    ) external view returns (bool isValid, string memory reason) {
+    ) public view returns (bool isValid, string memory reason) {
         // Get agent details
         (
             ,
@@ -334,5 +354,31 @@ contract PolicyCoordinator {
                 abi.encodePacked("Policy '", name, "' authorized transaction")
             )
         );
+    }
+
+    /**
+     * @notice Handle incoming messages from Hyperlane
+     * @param _origin Domain of the sender chain
+     * @param _message Encoded message data
+     */
+    function handle(
+        uint32 _origin,
+        bytes32 /* _sender */,
+        bytes calldata _message
+    ) external payable override {
+        // Verify sender
+        require(msg.sender == mailbox, "Only mailbox can deliver");
+        require(_origin == originDomain, "Invalid origin domain");
+
+        // Decode the task data
+        (
+            string memory proofOfTask,
+            bytes memory taskData,
+            uint256 taskDefinitionId
+        ) = abi.decode(_message, (string, bytes, uint256));
+
+        string memory jsonData = string(taskData);
+
+        emit TaskDataReceived(proofOfTask, jsonData, taskDefinitionId);
     }
 }
