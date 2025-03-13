@@ -28,8 +28,8 @@ contract AgentRegistryTest is Test {
     address public admin;
     address public owner;
     address public user;
-    MockPolicy public validPolicy;
-    MockPolicy public invalidPolicy;
+    uint256 public policyId1;
+    uint256 public policyId2;
 
     event AgentRegistered(
         string indexed dockerfileHash,
@@ -40,6 +40,8 @@ contract AgentRegistryTest is Test {
         AgentRegistry.AgentCategory category
     );
 
+    event PolicyIdsUpdated(string indexed dockerfileHash, uint256[] policyIds);
+
     function setUp() public {
         console.log("=== Setup ===");
         admin = makeAddr("admin");
@@ -48,15 +50,34 @@ contract AgentRegistryTest is Test {
 
         vm.startPrank(admin);
         policyRegistry = new PolicyRegistry();
-        validPolicy = new MockPolicy(true);
-        invalidPolicy = new MockPolicy(false);
 
-        // Setup policy registry
-        policyRegistry.grantRole(policyRegistry.POLICY_CREATOR_ROLE(), admin);
-        policyRegistry.registerPolicy(
-            "Valid Policy",
-            "A policy that always passes",
-            address(validPolicy)
+        // Setup policy registry - create policies
+        bytes4[] memory functions1 = new bytes4[](1);
+        functions1[0] = bytes4(keccak256("transfer(address,uint256)"));
+        address[] memory contracts1 = new address[](1);
+        contracts1[0] = makeAddr("contract1");
+
+        policyId1 = policyRegistry.registerPolicy(
+            "Test Policy 1",
+            "A policy for testing",
+            0, // no start time
+            0, // no end time
+            functions1,
+            contracts1
+        );
+
+        bytes4[] memory functions2 = new bytes4[](1);
+        functions2[0] = bytes4(keccak256("approve(address,uint256)"));
+        address[] memory contracts2 = new address[](1);
+        contracts2[0] = makeAddr("contract2");
+
+        policyId2 = policyRegistry.registerPolicy(
+            "Test Policy 2",
+            "Another policy for testing",
+            0,
+            0,
+            functions2,
+            contracts2
         );
 
         agentRegistry = new AgentRegistry(address(policyRegistry));
@@ -68,8 +89,8 @@ contract AgentRegistryTest is Test {
 
         string memory dockerfileHash = "hash1";
         uint256 executionFee = 0.1 ether;
-        address[] memory policies = new address[](1);
-        policies[0] = address(validPolicy);
+        uint256[] memory policyIds = new uint256[](1);
+        policyIds[0] = policyId1;
         string memory location = "ipfs://location";
         string memory description = "Test Agent";
         AgentRegistry.AgentCategory category = AgentRegistry.AgentCategory.DeFi;
@@ -93,7 +114,7 @@ contract AgentRegistryTest is Test {
         agentRegistry.registerAgent(
             dockerfileHash,
             executionFee,
-            policies,
+            policyIds,
             location,
             description,
             category
@@ -102,7 +123,7 @@ contract AgentRegistryTest is Test {
         (
             address storedOwner,
             uint256 storedFee,
-            address[] memory storedPolicies,
+            uint256[] memory storedPolicyIds,
             bool isRegistered,
             string memory storedHash,
             string memory storedLocation,
@@ -112,7 +133,8 @@ contract AgentRegistryTest is Test {
 
         assertEq(storedOwner, owner);
         assertEq(storedFee, executionFee);
-        assertEq(storedPolicies[0], policies[0]);
+        assertEq(storedPolicyIds.length, 1);
+        assertEq(storedPolicyIds[0], policyId1);
         assertTrue(isRegistered);
         assertEq(storedHash, dockerfileHash);
         assertEq(storedLocation, location);
@@ -121,53 +143,39 @@ contract AgentRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function test_ValidateAgentAction() public {
+    function test_UpdatePolicyIds() public {
         // First register an agent
         vm.startPrank(owner);
 
         string memory dockerfileHash = "hash1";
-        address[] memory policies = new address[](1);
-        policies[0] = address(validPolicy);
+        uint256[] memory policyIds = new uint256[](1);
+        policyIds[0] = policyId1;
 
         agentRegistry.registerAgent(
             dockerfileHash,
             0.1 ether,
-            policies,
+            policyIds,
             "ipfs://location",
             "Test Agent",
             AgentRegistry.AgentCategory.DeFi
         );
 
-        bool isValid = agentRegistry.validateAgentAction(dockerfileHash, "0x");
-        assertTrue(isValid);
-        vm.stopPrank();
-    }
+        // Update policy IDs
+        uint256[] memory newPolicyIds = new uint256[](2);
+        newPolicyIds[0] = policyId1;
+        newPolicyIds[1] = policyId2;
 
-    function test_RevertWhen_ValidatingWithInvalidPolicy() public {
-        vm.startPrank(admin);
-        policyRegistry.registerPolicy(
-            "Invalid Policy",
-            "A policy that always fails",
-            address(invalidPolicy)
-        );
-        vm.stopPrank();
+        vm.expectEmit(true, false, false, true);
+        emit PolicyIdsUpdated(dockerfileHash, newPolicyIds);
 
-        vm.startPrank(owner);
-        string memory dockerfileHash = "hash1";
-        address[] memory policies = new address[](1);
-        policies[0] = address(invalidPolicy);
+        agentRegistry.updatePolicyIds(dockerfileHash, newPolicyIds);
 
-        agentRegistry.registerAgent(
-            dockerfileHash,
-            0.1 ether,
-            policies,
-            "ipfs://location",
-            "Test Agent",
-            AgentRegistry.AgentCategory.DeFi
-        );
+        (, , uint256[] memory storedPolicyIds, , , , , ) = agentRegistry
+            .getAgent(dockerfileHash);
 
-        vm.expectRevert("Policy check failed");
-        agentRegistry.validateAgentAction(dockerfileHash, "0x");
+        assertEq(storedPolicyIds.length, 2);
+        assertEq(storedPolicyIds[0], policyId1);
+        assertEq(storedPolicyIds[1], policyId2);
         vm.stopPrank();
     }
 
@@ -176,13 +184,13 @@ contract AgentRegistryTest is Test {
         vm.startPrank(owner);
 
         string memory dockerfileHash = "hash1";
-        address[] memory policies = new address[](1);
-        policies[0] = address(validPolicy);
+        uint256[] memory policyIds = new uint256[](1);
+        policyIds[0] = policyId1;
 
         agentRegistry.registerAgent(
             dockerfileHash,
             0.1 ether,
-            policies,
+            policyIds,
             "ipfs://location",
             "Test Agent",
             AgentRegistry.AgentCategory.DeFi
