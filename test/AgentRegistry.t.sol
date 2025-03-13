@@ -4,23 +4,6 @@ pragma solidity 0.8.28;
 import {Test, console} from "forge-std/Test.sol";
 import {AgentRegistry} from "../src/AgentRegistry.sol";
 import {PolicyRegistry} from "../src/PolicyRegistry.sol";
-import {IPolicy} from "../src/interfaces/IPolicy.sol";
-
-// Mock Policy for testing
-contract MockPolicy is IPolicy {
-    bool private shouldPass;
-
-    constructor(bool _shouldPass) {
-        shouldPass = _shouldPass;
-    }
-
-    function validateAction(
-        string calldata,
-        bytes calldata
-    ) external view returns (bool valid, string memory reason) {
-        return (shouldPass, shouldPass ? "" : "Policy check failed");
-    }
-}
 
 contract AgentRegistryTest is Test {
     AgentRegistry public agentRegistry;

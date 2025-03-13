@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
 import "./PolicyRegistry.sol";
-import "./interfaces/IPolicy.sol";
 
 /**
  * @title AgentRegistry

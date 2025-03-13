@@ -226,7 +226,12 @@ contract PolicyRegistryTest is Test {
         uint256[] memory policyIds = new uint256[](1);
         policyIds[0] = policyId;
 
-        vm.expectRevert(abi.encodeWithSelector(PolicyRegistry.PolicyNotActive.selector, policyId));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PolicyRegistry.PolicyNotActive.selector,
+                policyId
+            )
+        );
         policyRegistry.verifyPolicies(policyIds);
         vm.stopPrank();
     }
