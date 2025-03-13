@@ -7,7 +7,14 @@ import "./interfaces/IPolicy.sol";
 
 /**
  * @title AgentRegistry
- * @notice Manages registration of agents identified by their Dockerfile hash
+ * @author SynthOS - Verifiable DeFAI Agent Marketplace
+ * @notice Manages registration and metadata of DeFAI agents
+ * @dev Handles agent registration, updates, and policy associations. Each agent
+ *      is identified by their unique Dockerfile hash and must specify at least
+ *      one policy that governs their actions.
+ *
+ * @custom:security-contact security@synthos.io
+ * @custom:version 1.0.0
  */
 contract AgentRegistry {
     using EnumerableSet for EnumerableSet.Bytes32Set;
