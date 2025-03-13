@@ -3,3 +3,4 @@
 ds-test/=lib/forge-std/lib/ds-test/src/
 forge-std-1.9.6/=dependencies/forge-std-1.9.6/
 forge-std/=lib/forge-std/src/
+hyperlane-core-v5.0.0/=dependencies/hyperlane-core-v5.0.0/

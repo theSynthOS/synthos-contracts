@@ -11,3 +11,10 @@ version = "1.9.6"
 url = "https://soldeer-revisions.s3.amazonaws.com/forge-std/1_9_6_01-02-2025_20:49:10_forge-std-1.9.zip"
 checksum = "55f341818321b3f925161a72fd0dcd62e4a0a4b66785a7a932bf2bfaf96fb9d1"
 integrity = "e9ecdc364d152157431e5df5aa041ffddbe9bb1c1ad81634b1e72df9e23814e8"
+
+[[dependencies]]
+name = "hyperlane-core"
+version = "v5.0.0"
+url = "https://soldeer-revisions.s3.amazonaws.com/hyperlane-core/v5_0_0_13-08-2024_05:17:49_hyperlane-core.zip"
+checksum = "c74e766ef0f55e6b76e0ebdede7008e81df1151bb7f44fb2caaac944f7853ad3"
+integrity = "9241fba74acc4284aa203748a1cf0ef2f7f68c6186238d884a739367084437ff"
