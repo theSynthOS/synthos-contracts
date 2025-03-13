@@ -31,6 +31,9 @@ contract PolicyCoordinatorTest is Test {
         agentOwner = makeAddr("agentOwner");
         user = makeAddr("user");
 
+        address SCROLL_HYPERLANE_MAILBOX = 0x4200000000000000000000000000000000000000;
+        uint32 BASE_DOMAIN_ID = 8453;
+
         vm.startPrank(admin);
 
         // Deploy contracts
@@ -38,7 +41,9 @@ contract PolicyCoordinatorTest is Test {
         agentRegistry = new AgentRegistry(address(policyRegistry));
         policyCoordinator = new PolicyCoordinator(
             address(agentRegistry),
-            address(policyRegistry)
+            address(policyRegistry),
+            SCROLL_HYPERLANE_MAILBOX,
+            BASE_DOMAIN_ID
         );
 
         // Setup initial policies

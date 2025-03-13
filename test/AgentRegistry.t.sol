@@ -209,4 +209,52 @@ contract AgentRegistryTest is Test {
         assertEq(uint(storedCategory), uint(newCategory));
         vm.stopPrank();
     }
+
+    function test_GetAgentHashById() public {
+        vm.startPrank(owner);
+        
+        string memory dockerfileHash = "hash1";
+        uint256[] memory policyIds = new uint256[](1);
+        policyIds[0] = policyId1;
+
+        agentRegistry.registerAgent(
+            dockerfileHash,
+            0.1 ether,
+            policyIds,
+            "ipfs://location",
+            "Test Agent",
+            AgentRegistry.AgentCategory.DeFi
+        );
+
+        // Agent ID should be 0 since it's the first agent
+        assertEq(agentRegistry.getAgentHashById(0), dockerfileHash);
+        vm.stopPrank();
+    }
+
+    function test_GetNextAgentId() public {
+        assertEq(agentRegistry.getNextAgentId(), 0); // Initially 0
+
+        vm.startPrank(owner);
+        
+        string memory dockerfileHash = "hash1";
+        uint256[] memory policyIds = new uint256[](1);
+        policyIds[0] = policyId1;
+
+        agentRegistry.registerAgent(
+            dockerfileHash,
+            0.1 ether,
+            policyIds,
+            "ipfs://location",
+            "Test Agent",
+            AgentRegistry.AgentCategory.DeFi
+        );
+
+        assertEq(agentRegistry.getNextAgentId(), 1); // Should be 1 after registration
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_GetAgentHashByInvalidId() public {
+        vm.expectRevert(AgentRegistry.InvalidIndex.selector);
+        agentRegistry.getAgentHashById(999); // Non-existent ID
+    }
 }

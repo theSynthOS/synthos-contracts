@@ -12,8 +12,6 @@ import "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
  *      for agent actions. Each policy combines time conditions (when), function
  *      constraints (how), and resource limitations (what contracts can be accessed).
  *
- * @custom:security-contact security@synthos.io
- * @custom:version 1.0.0
  */
 contract PolicyRegistry is AccessControl {
     using EnumerableSet for EnumerableSet.AddressSet;
