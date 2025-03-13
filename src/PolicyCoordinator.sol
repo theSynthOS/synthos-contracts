@@ -6,7 +6,14 @@ import "./PolicyRegistry.sol";
 
 /**
  * @title PolicyCoordinator
+ * @author SynthOS - Verifiable DeFAI Agent Marketplace
  * @notice Coordinates validation of transactions against agent policies
+ * @dev Acts as the central coordinator for validating agent actions against
+ *      their registered policies. Ensures all actions comply with time,
+ *      function, and resource constraints.
+ *
+ * @custom:security-contact security@synthos.io
+ * @custom:version 1.0.0
  */
 contract PolicyCoordinator {
     AgentRegistry public agentRegistry;
@@ -93,7 +100,6 @@ contract PolicyCoordinator {
                 PolicyRegistry.ActionCondition memory howCondition,
                 PolicyRegistry.ResourceCondition memory whatCondition,
                 bool isActive,
-                ,
 
             ) = policyRegistry.getPolicyMetadata(policyId);
 
@@ -224,6 +230,8 @@ contract PolicyCoordinator {
                 description: description,
                 startTime: whenCondition.startTime,
                 endTime: whenCondition.endTime,
+                allowedFunctions: howCondition.allowedFunctions,
+                allowedContracts: whatCondition.allowedContracts,
                 isActive: isActive,
                 creator: creator
             });
@@ -238,6 +246,8 @@ contract PolicyCoordinator {
         string description;
         uint256 startTime;
         uint256 endTime;
+        bytes4[] allowedFunctions;
+        address[] allowedContracts;
         bool isActive;
         address creator;
     }
@@ -268,12 +278,12 @@ contract PolicyCoordinator {
         // Get policy metadata
         (
             string memory name,
-            string memory description,
+            ,
             PolicyRegistry.TimeCondition memory whenCondition,
             PolicyRegistry.ActionCondition memory howCondition,
             PolicyRegistry.ResourceCondition memory whatCondition,
             bool isActive,
-            address creator
+
         ) = policyRegistry.getPolicyMetadata(policyId);
 
         if (!isActive) {
