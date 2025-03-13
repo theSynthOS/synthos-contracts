@@ -6,11 +6,20 @@ import {Test, console} from "forge-std/Test.sol";
 import {PolicyRegistry} from "../src/PolicyRegistry.sol";
 import {AgentRegistry} from "../src/AgentRegistry.sol";
 import {PolicyCoordinator} from "../src/PolicyCoordinator.sol";
+import {CrosschainSender} from "../src/CrosschainSender.sol";
+import {IAttestationCenter} from "../src/interfaces/IAttestationCenter.sol";
+import {IAvsLogic} from "../src/interfaces/IAvsLogic.sol";
 
 contract DeployScript is Script {
     function run() external {
         uint256 privKey = vm.envUint("PRIV_KEY");
         address deployer = vm.rememberKey(privKey);
+
+        address ATTESTATION_CENTER = 0xcE2c6cd7ab51837E6F0f2313D45D443F79097Dd5;
+        address SCROLL_HYPERLANE_MAILBOX = 0x3C5154a193D6e2955650f9305c8d80c18C814A68;
+        address BASE_HYPERLANE_MAILBOX = 0x6966b0E55883d49BFB24539356a2f8A673E02039;
+        uint32 BASE_DOMAIN_ID = 84532;
+        uint32 SCROLL_DOMAIN_ID = 534351;
 
         console.log("Deployer: ", deployer);
         console.log("Deployer Nonce: ", vm.getNonce(deployer));
@@ -30,26 +39,45 @@ contract DeployScript is Script {
         // 3. Deploy PolicyCoordinator with both registries
         PolicyCoordinator policyCoordinator = new PolicyCoordinator(
             address(agentRegistry),
-            address(policyRegistry)
+            address(policyRegistry),
+            SCROLL_HYPERLANE_MAILBOX,
+            BASE_DOMAIN_ID
         );
         console.log(
             "PolicyCoordinator deployed at: ",
             address(policyCoordinator)
         );
 
-        // 4. Register AAVE policy
-        bytes4[] memory allowedFunctions = new bytes4[](4);
+        // 4. Register AAVE policy with support for Supply, Withdraw, Borrow, Repay and Deposit
+        bytes4[] memory allowedFunctions = new bytes4[](15);
+        // Supply
         allowedFunctions[0] = 0x617ba037;
         allowedFunctions[1] = 0xf7a73840;
         allowedFunctions[2] = 0x02c205f0;
         allowedFunctions[3] = 0x680dd47c;
+        // Borrow
+        allowedFunctions[4] = 0xa415bcad;
+        allowedFunctions[5] = 0xd5eed868;
+        // Repay
+        allowedFunctions[6] = 0x563dd613;
+        allowedFunctions[7] = 0x573ade81;
+        allowedFunctions[8] = 0x2dad97d4;
+        allowedFunctions[9] = 0xdc7c0bff;
+        allowedFunctions[10] = 0x94b576de;
+        allowedFunctions[11] = 0xee3e210b;
+        // Withdraw
+        allowedFunctions[12] = 0x69328dec;
+        allowedFunctions[13] = 0x8e19899e;
+        // Deposit
+        allowedFunctions[14] = 0xe8eda9df;
 
-        address[] memory allowedContracts = new address[](1);
+        address[] memory allowedContracts = new address[](2);
         allowedContracts[0] = 0x48914C788295b5db23aF2b5F0B3BE775C4eA9440;
+        allowedContracts[1] = 0xB186894F315133C2396104CAb386C3A0fEC09025;
 
         uint256 policyId = policyRegistry.registerPolicy(
-            "AAVE Supply AVS Plugin",
-            "This plugin allows for the supply actions to be done for the Scroll AAVE Market",
+            "AAVE Complete AVS Plugin",
+            "This plugin allows for the supply, borrow, repay, withdraw and deposit actions to be done for the Scroll AAVE Market",
             0, // no start time
             0, // no end time
             allowedFunctions,
