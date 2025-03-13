@@ -12,8 +12,6 @@ import "./PolicyRegistry.sol";
  *      is identified by their unique Dockerfile hash and must specify at least
  *      one policy that governs their actions.
  *
- * @custom:security-contact security@synthos.io
- * @custom:version 1.0.0
  */
 contract AgentRegistry {
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -42,6 +40,10 @@ contract AgentRegistry {
 
     // Set of all registered dockerfile hashes (as bytes32)
     EnumerableSet.Bytes32Set private _registeredHashes;
+
+    // Add a mapping to track agent IDs
+    mapping(uint256 => string) private _agentIdToHash;
+    uint256 private _nextAgentId;
 
     // Events
     event AgentRegistered(
@@ -105,6 +107,9 @@ contract AgentRegistry {
 
         // Verify all policies are valid and active
         policyRegistry.verifyPolicies(policyIds);
+
+        uint256 agentId = _nextAgentId++;
+        _agentIdToHash[agentId] = dockerfileHash;
 
         // Register the agent
         agents[dockerfileHash] = Agent({
@@ -284,5 +289,26 @@ contract AgentRegistry {
         }
 
         return hashes;
+    }
+
+    /**
+     * @notice Get agent's dockerfile hash by ID
+     * @param agentId The ID of the agent
+     * @return dockerfileHash The hash of the agent's Dockerfile
+     */
+    function getAgentHashById(
+        uint256 agentId
+    ) external view returns (string memory) {
+        string memory dockerfileHash = _agentIdToHash[agentId];
+        if (bytes(dockerfileHash).length == 0) revert InvalidIndex();
+        return dockerfileHash;
+    }
+
+    /**
+     * @notice Get total number of registered agents (also serves as next agent ID)
+     * @return Number of registered agents
+     */
+    function getNextAgentId() external view returns (uint256) {
+        return _nextAgentId;
     }
 }
