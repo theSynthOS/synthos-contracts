@@ -10,87 +10,166 @@ import "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
  */
 contract PolicyRegistry is AccessControl {
     using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSet for EnumerableSet.UintSet;
 
     bytes32 public constant POLICY_CREATOR_ROLE =
         keccak256("POLICY_CREATOR_ROLE");
 
+    // Structs to define policy components
+    struct TimeCondition {
+        uint256 startTime; // 0 means no start time restriction
+        uint256 endTime; // 0 means no end time restriction
+    }
+
+    struct ActionCondition {
+        bytes4[] allowedFunctions; // Function selectors that can be executed
+    }
+
+    struct ResourceCondition {
+        address[] allowedContracts; // Contracts this policy can interact with
+    }
+
     struct Policy {
         string name;
         string description;
-        address implementation;
+        TimeCondition whenCondition;
+        ActionCondition howCondition;
+        ResourceCondition whatCondition;
         bool isActive;
         address creator;
     }
 
-    // Policy implementation address => Policy details
-    mapping(address => Policy) public policies;
+    // Policy ID => Policy details
+    mapping(uint256 => Policy) public policies;
 
-    // Set of all registered policy implementations
-    EnumerableSet.AddressSet private _registeredPolicies;
+    // Counter for generating unique policy IDs
+    uint256 private _nextPolicyId;
+
+    // Set of all registered policy IDs
+    EnumerableSet.UintSet private _registeredPolicyIds;
 
     // Events
     event PolicyRegistered(
-        address indexed implementation,
+        uint256 indexed policyId,
         string name,
         string description,
         address indexed creator
     );
-    event PolicyDeactivated(address indexed implementation);
-    event PolicyReactivated(address indexed implementation);
+    event PolicyDeactivated(uint256 indexed policyId);
+    event PolicyReactivated(uint256 indexed policyId);
 
     // Errors
     error PolicyAlreadyRegistered();
-    error PolicyNotRegistered();
-    error PolicyNotActive();
+    error PolicyNotRegistered(uint256 policyId);
+    error PolicyNotActive(uint256 policyId);
     error EmptyPolicyName();
     error EmptyPolicyDescription();
-    error InvalidPolicyImplementation();
+    error NoActionsDefined();
+    error NoResourcesDefined();
     error NotPolicyCreator();
-    error InvalidIndex();
+    error InvalidTimeRange();
+    error AgentNotAuthorized();
+    error EmptyPolicies();
 
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(POLICY_CREATOR_ROLE, msg.sender);
+        _nextPolicyId = 1;
     }
 
     /**
-     * @notice Register a new policy
+     * @notice Register a new policy with conditions
      * @param name Name of the policy
      * @param description Description of what the policy enforces
-     * @param implementation Address of the policy implementation contract
+     * @param startTime Start time for policy validity (0 for no restriction)
+     * @param endTime End time for policy validity (0 for no restriction)
+     * @param allowedFunctions Array of function selectors that can be executed
+     * @param allowedContracts Array of contract addresses that can be interacted with
+     * @return policyId The ID of the newly created policy
      */
     function registerPolicy(
         string calldata name,
         string calldata description,
-        address implementation
-    ) external onlyRole(POLICY_CREATOR_ROLE) {
+        uint256 startTime,
+        uint256 endTime,
+        bytes4[] calldata allowedFunctions,
+        address[] calldata allowedContracts
+    ) external onlyRole(POLICY_CREATOR_ROLE) returns (uint256) {
         if (bytes(name).length == 0) revert EmptyPolicyName();
         if (bytes(description).length == 0) revert EmptyPolicyDescription();
-        if (implementation == address(0)) revert InvalidPolicyImplementation();
-        if (_registeredPolicies.contains(implementation))
-            revert PolicyAlreadyRegistered();
+        if (allowedFunctions.length == 0) revert NoActionsDefined();
+        if (allowedContracts.length == 0) revert NoResourcesDefined();
+        if (endTime != 0 && startTime >= endTime) revert InvalidTimeRange();
 
-        policies[implementation] = Policy({
+        uint256 policyId = _nextPolicyId++;
+
+        policies[policyId] = Policy({
             name: name,
             description: description,
-            implementation: implementation,
+            whenCondition: TimeCondition({
+                startTime: startTime,
+                endTime: endTime
+            }),
+            howCondition: ActionCondition({allowedFunctions: allowedFunctions}),
+            whatCondition: ResourceCondition({
+                allowedContracts: allowedContracts
+            }),
             isActive: true,
             creator: msg.sender
         });
 
-        _registeredPolicies.add(implementation);
+        _registeredPolicyIds.add(policyId);
 
-        emit PolicyRegistered(implementation, name, description, msg.sender);
+        emit PolicyRegistered(policyId, name, description, msg.sender);
+        return policyId;
+    }
+
+    /**
+     * @notice Verify that all policies in an array exist and are active
+     * @param policyIds Array of policy IDs to verify
+     */
+    function verifyPolicies(uint256[] calldata policyIds) external view {
+        if (policyIds.length == 0) revert EmptyPolicies();
+
+        for (uint256 i = 0; i < policyIds.length; i++) {
+            uint256 policyId = policyIds[i];
+
+            // Check if policy exists with this ID
+            if (!isPolicyRegistered(policyId))
+                revert PolicyNotRegistered(policyId);
+
+            // Check if policy is active
+            if (!isPolicyActive(policyId)) revert PolicyNotActive(policyId);
+        }
+    }
+
+    /**
+     * @notice Check if a policy is registered
+     * @param policyId ID of the policy to check
+     * @return True if policy is registered
+     */
+    function isPolicyRegistered(uint256 policyId) public view returns (bool) {
+        return _registeredPolicyIds.contains(policyId);
+    }
+
+    /**
+     * @notice Check if a policy is active
+     * @param policyId ID of the policy to check
+     * @return True if policy is active
+     */
+    function isPolicyActive(uint256 policyId) public view returns (bool) {
+        Policy storage policy = policies[policyId];
+        return policy.isActive;
     }
 
     /**
      * @notice Deactivate a policy
-     * @param implementation Address of the policy to deactivate
+     * @param policyId ID of the policy to deactivate
      */
-    function deactivatePolicy(address implementation) external {
-        Policy storage policy = policies[implementation];
-        if (!_registeredPolicies.contains(implementation))
-            revert PolicyNotRegistered();
+    function deactivatePolicy(uint256 policyId) external {
+        Policy storage policy = policies[policyId];
+        if (!_registeredPolicyIds.contains(policyId))
+            revert PolicyNotRegistered(policyId);
         if (
             msg.sender != policy.creator &&
             !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)
@@ -99,17 +178,17 @@ contract PolicyRegistry is AccessControl {
         }
 
         policy.isActive = false;
-        emit PolicyDeactivated(implementation);
+        emit PolicyDeactivated(policyId);
     }
 
     /**
      * @notice Reactivate a policy
-     * @param implementation Address of the policy to reactivate
+     * @param policyId ID of the policy to reactivate
      */
-    function reactivatePolicy(address implementation) external {
-        Policy storage policy = policies[implementation];
-        if (!_registeredPolicies.contains(implementation))
-            revert PolicyNotRegistered();
+    function reactivatePolicy(uint256 policyId) external {
+        Policy storage policy = policies[policyId];
+        if (!_registeredPolicyIds.contains(policyId))
+            revert PolicyNotRegistered(policyId);
         if (
             msg.sender != policy.creator &&
             !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)
@@ -118,117 +197,46 @@ contract PolicyRegistry is AccessControl {
         }
 
         policy.isActive = true;
-        emit PolicyReactivated(implementation);
+        emit PolicyReactivated(policyId);
     }
 
     /**
-     * @notice Verify that all policies for an agent are active
-     * @param policyAddresses Array of policy addresses to verify
-     * @return bool True if all policies are active
+     * @notice Get all registered policy IDs
+     * @return Array of policy IDs
      */
-    function verifyPolicies(
-        address[] calldata policyAddresses
-    ) external view returns (bool) {
-        for (uint256 i = 0; i < policyAddresses.length; i++) {
-            address policyAddr = policyAddresses[i];
-            if (!_registeredPolicies.contains(policyAddr))
-                revert PolicyNotRegistered();
-            if (!policies[policyAddr].isActive) revert PolicyNotActive();
-        }
-        return true;
-    }
-
-    /**
-     * @notice Get all registered policy addresses
-     * @return Array of policy implementation addresses
-     */
-    function getAllPolicies() external view returns (address[] memory) {
-        return _registeredPolicies.values();
-    }
-
-    /**
-     * @notice Get active policy count
-     * @return Number of active policies
-     */
-    function getActivePolicyCount() external view returns (uint256) {
-        uint256 count = 0;
-        uint256 length = _registeredPolicies.length();
-        for (uint256 i = 0; i < length; i++) {
-            if (policies[_registeredPolicies.at(i)].isActive) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    /**
-     * @notice Get all policies with their metadata
-     * @return policyAddresses Array of policy addresses
-     * @return names Array of policy names
-     * @return descriptions Array of policy descriptions
-     * @return isActives Array of policy active status
-     * @return creators Array of policy creators
-     */
-    function getAllPoliciesWithMetadata()
-        external
-        view
-        returns (
-            address[] memory policyAddresses,
-            string[] memory names,
-            string[] memory descriptions,
-            bool[] memory isActives,
-            address[] memory creators
-        )
-    {
-        uint256 length = _registeredPolicies.length();
-
-        policyAddresses = new address[](length);
-        names = new string[](length);
-        descriptions = new string[](length);
-        isActives = new bool[](length);
-        creators = new address[](length);
-
-        for (uint256 i = 0; i < length; i++) {
-            address policyAddr = _registeredPolicies.at(i);
-            Policy memory policy = policies[policyAddr];
-
-            policyAddresses[i] = policy.implementation;
-            names[i] = policy.name;
-            descriptions[i] = policy.description;
-            isActives[i] = policy.isActive;
-            creators[i] = policy.creator;
-        }
-
-        return (policyAddresses, names, descriptions, isActives, creators);
+    function getAllPolicyIds() external view returns (uint256[] memory) {
+        return _registeredPolicyIds.values();
     }
 
     /**
      * @notice Get policy metadata for a specific policy
-     * @param implementation Address of the policy implementation
-     * @return name Name of the policy
-     * @return description Description of the policy
-     * @return isActive Whether the policy is active
-     * @return creator Address of the policy creator
+     * @param policyId ID of the policy
      */
     function getPolicyMetadata(
-        address implementation
+        uint256 policyId
     )
         external
         view
         returns (
             string memory name,
             string memory description,
+            TimeCondition memory whenCondition,
+            ActionCondition memory howCondition,
+            ResourceCondition memory whatCondition,
             bool isActive,
             address creator
         )
     {
-        if (!_registeredPolicies.contains(implementation))
-            revert PolicyNotRegistered();
+        if (!_registeredPolicyIds.contains(policyId))
+            revert PolicyNotRegistered(policyId);
 
-        Policy memory policy = policies[implementation];
+        Policy storage policy = policies[policyId];
         return (
             policy.name,
             policy.description,
+            policy.whenCondition,
+            policy.howCondition,
+            policy.whatCondition,
             policy.isActive,
             policy.creator
         );
