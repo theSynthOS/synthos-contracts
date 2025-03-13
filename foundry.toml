@@ -14,7 +14,9 @@ remappings = [
 [dependencies]
 forge-std = "1.9.6"
 "@openzeppelin-contracts" = "5.2.0"
+hyperlane-core = "v5.0.0"
 
 [etherscan]
 sepolia = { key = "CBTKPBT7ZHVZ3QEKT761YUTDAFYDUGEUTE", url = "https://api-sepolia.etherscan.io/api" }
 scroll-sepolia = { key = "YD4SSI87D8CE61VG5STXQAAWVR2WF8DYPY", url = "https://api-sepolia.scrollscan.com/api" }
+base-sepolia = { key = "7EYU58KR7C3A1E54XSZP5IR2J7RBNH46EZ", url = "https://api-sepolia.basescan.org/api" }
