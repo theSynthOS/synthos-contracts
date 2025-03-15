@@ -5,6 +5,8 @@ import "./AgentRegistry.sol";
 import "./PolicyRegistry.sol";
 import {IMessageRecipient} from "hyperlane-core-v5.0.0/contracts/interfaces/IMessageRecipient.sol";
 import {TypeCasts} from "hyperlane-core-v5.0.0/contracts/libs/TypeCasts.sol";
+import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
+import {ITaskRegistry} from "./interfaces/ITaskRegistry.sol";
 
 /**
  * @title PolicyCoordinator
@@ -17,26 +19,60 @@ import {TypeCasts} from "hyperlane-core-v5.0.0/contracts/libs/TypeCasts.sol";
  */
 contract PolicyCoordinator is IMessageRecipient {
     using TypeCasts for bytes32;
+    using EnumerableSet for EnumerableSet.Bytes32Set;
 
     AgentRegistry public agentRegistry;
     PolicyRegistry public policyRegistry;
+    ITaskRegistry public taskRegistry;
 
-    // Errors
-    error AgentNotRegistered(string dockerfileHash);
-    error InvalidAgentId(uint256 agentId);
-    error NoPoliciesForAgent(string dockerfileHash);
-    error NoValidPolicies(uint256 agentId);
+    // Add Hyperlane mailbox
+    address public immutable mailbox;
+
+    // Add allowed origin domain (Base)
+    uint32 public immutable originDomain;
+
+    // Validation details
+    struct TaskValidationDetails {
+        uint256 timestamp;
+        string status;
+        string reason;
+    }
+
+    // New struct for agent task tracking
+    struct AgentTaskDetails {
+        bytes32 taskUuid;
+        uint256 receivedAt;
+    }
+
+    // Struct to return policy data in a simplified format
+    struct PolicyDetails {
+        string name;
+        string description;
+        uint256 startTime;
+        uint256 endTime;
+        bytes4[] allowedFunctions;
+        address[] allowedContracts;
+        bool isActive;
+        address creator;
+    }
+
+    // Existing mappings
+    mapping(bytes32 => TaskValidationDetails) public taskValidations;
+    mapping(uint256 => EnumerableSet.Bytes32Set) private _agentTasks;
+
+    // New mapping for agent task history
+    mapping(uint256 => AgentTaskDetails[]) public agentTaskHistory;
 
     // Events
     event TransactionValidated(
-        bytes32 indexed safeTxHash,
+        bytes32 indexed taskUuid,
         uint256 indexed agentId,
-        bool isValid,
+        string status,
         string reason
     );
     event PolicyValidated(
         uint256 indexed policyId,
-        bytes32 indexed safeTxHash,
+        bytes32 indexed taskUuid,
         bool isValid
     );
     event TaskDataReceived(
@@ -45,20 +81,32 @@ contract PolicyCoordinator is IMessageRecipient {
         uint256 taskDefinitionId
     );
 
-    // Add Hyperlane mailbox
-    address public immutable mailbox;
+    // Add event for task receipt
+    event TaskReceived(
+        uint256 indexed agentId,
+        bytes32 indexed taskUuid,
+        uint256 receivedAt
+    );
 
-    // Add allowed origin domain (Base)
-    uint32 public immutable originDomain;
+    event TaskUUIDExtracted(bytes32 taskUuid);
+    event AgentIdExtracted(uint256 agentId);
+
+    // Errors
+    error AgentNotRegistered(string dockerfileHash);
+    error InvalidAgentId(uint256 agentId);
+    error NoPoliciesForAgent(string dockerfileHash);
+    error NoValidPolicies(uint256 agentId);
 
     constructor(
         address _agentRegistry,
         address _policyRegistry,
+        address _taskRegistry,
         address _mailbox,
         uint32 _originDomain
     ) {
         agentRegistry = AgentRegistry(_agentRegistry);
         policyRegistry = PolicyRegistry(_policyRegistry);
+        taskRegistry = ITaskRegistry(_taskRegistry);
         mailbox = _mailbox;
         originDomain = _originDomain;
     }
@@ -260,18 +308,6 @@ contract PolicyCoordinator is IMessageRecipient {
         return (policyIds, policyDetails);
     }
 
-    // Struct to return policy data in a simplified format
-    struct PolicyDetails {
-        string name;
-        string description;
-        uint256 startTime;
-        uint256 endTime;
-        bytes4[] allowedFunctions;
-        address[] allowedContracts;
-        bool isActive;
-        address creator;
-    }
-
     /**
      * @notice Check if a specific policy validates a transaction
      * @param policyId ID of the policy to check
@@ -370,15 +406,83 @@ contract PolicyCoordinator is IMessageRecipient {
         require(msg.sender == mailbox, "Only mailbox can deliver");
         require(_origin == originDomain, "Invalid origin domain");
 
-        // Decode the task data
+        // Decode the structured data
         (
             string memory proofOfTask,
-            bytes memory taskData,
-            uint256 taskDefinitionId
-        ) = abi.decode(_message, (string, bytes, uint256));
+            bytes32 taskUuid,
+            uint256 agentId,
+            uint256 timestamp,
+            string memory status,
+            string memory reason
+        ) = abi.decode(
+                _message,
+                (string, bytes32, uint256, uint256, string, string)
+            );
 
-        string memory jsonData = string(taskData);
+        // Store validation status using taskUuid directly
+        taskValidations[taskUuid] = TaskValidationDetails({
+            timestamp: timestamp,
+            status: status,
+            reason: reason
+        });
 
-        emit TaskDataReceived(proofOfTask, jsonData, taskDefinitionId);
+        // Add task to agent's set
+        _agentTasks[agentId].add(taskUuid);
+
+        // Add to agent's task history
+        agentTaskHistory[agentId].push(
+            AgentTaskDetails({taskUuid: taskUuid, receivedAt: timestamp})
+        );
+
+        emit TaskReceived(agentId, taskUuid, timestamp);
+        emit TransactionValidated(taskUuid, agentId, status, reason);
+    }
+
+    /**
+     * @notice Get validation status for a task
+     * @param taskUuid UUID of the task
+     * @return status Current status of the task
+     * @return reason Reason for the status
+     */
+    function getValidationStatus(
+        bytes32 taskUuid
+    ) external view returns (string memory status, string memory reason) {
+        TaskValidationDetails memory validation = taskValidations[taskUuid];
+        return (validation.status, validation.reason);
+    }
+
+    /**
+     * @notice Get all tasks for an agent
+     * @param agentId ID of the agent
+     */
+    function getAgentTasks(
+        uint256 agentId
+    ) external view returns (bytes32[] memory) {
+        return _agentTasks[agentId].values();
+    }
+
+    /**
+     * @notice Get task history for an agent
+     * @param agentId ID of the agent
+     */
+    function getAgentTaskHistory(
+        uint256 agentId
+    ) external view returns (AgentTaskDetails[] memory) {
+        return agentTaskHistory[agentId];
+    }
+
+    /**
+     * @notice Get the most recent task for an agent
+     * @param agentId ID of the agent
+     */
+    function getAgentLatestTask(
+        uint256 agentId
+    ) external view returns (bytes32 taskUuid, uint256 receivedAt) {
+        AgentTaskDetails[] memory history = agentTaskHistory[agentId];
+        if (history.length > 0) {
+            AgentTaskDetails memory latest = history[history.length - 1];
+            return (latest.taskUuid, latest.receivedAt);
+        }
+        return (bytes32(0), 0);
     }
 }
