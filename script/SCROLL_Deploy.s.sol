@@ -9,17 +9,16 @@ import {PolicyCoordinator} from "../src/PolicyCoordinator.sol";
 import {CrosschainSender} from "../src/CrosschainSender.sol";
 import {IAttestationCenter} from "../src/interfaces/IAttestationCenter.sol";
 import {IAvsLogic} from "../src/interfaces/IAvsLogic.sol";
+import {ITaskRegistry} from "../src/interfaces/ITaskRegistry.sol";
 
 contract DeployScript is Script {
     function run() external {
         uint256 privKey = vm.envUint("PRIV_KEY");
         address deployer = vm.rememberKey(privKey);
 
-        address ATTESTATION_CENTER = 0xcE2c6cd7ab51837E6F0f2313D45D443F79097Dd5;
         address SCROLL_HYPERLANE_MAILBOX = 0x3C5154a193D6e2955650f9305c8d80c18C814A68;
-        address BASE_HYPERLANE_MAILBOX = 0x6966b0E55883d49BFB24539356a2f8A673E02039;
         uint32 BASE_DOMAIN_ID = 84532;
-        uint32 SCROLL_DOMAIN_ID = 534351;
+        address TASK_REGISTRY = 0x8eab19f680afCFD21f0d42353E06C85F3359024C;
 
         console.log("Deployer: ", deployer);
         console.log("Deployer Nonce: ", vm.getNonce(deployer));
@@ -40,6 +39,7 @@ contract DeployScript is Script {
         PolicyCoordinator policyCoordinator = new PolicyCoordinator(
             address(agentRegistry),
             address(policyRegistry),
+            TASK_REGISTRY,
             SCROLL_HYPERLANE_MAILBOX,
             BASE_DOMAIN_ID
         );
@@ -106,6 +106,24 @@ contract DeployScript is Script {
             category
         );
         console.log("Registered AAVE agent with hash: ", dockerfileHash);
+
+        // 6. Register 2 task in the task registry, one invalid and one valid
+        ITaskRegistry taskRegistry = ITaskRegistry(TASK_REGISTRY);
+        taskRegistry.registerTask(
+            bytes32(
+                0x20dcb7f000000000000000000000000000000000000000000000000000000000
+                
+            ),
+            0x07eA79F68B2B3df564D0A34F8e19D9B1e339814b,
+            hex"a415bcad000000000000000000000000036cbd53842c5426634e7929541ec2318f3dcf7e0000000000000000000000000000000000000000000000000000000014dc938000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000eb0d8736cc2c47882f112507cc8a3355d37d2413"
+        );
+        taskRegistry.registerTask(
+            bytes32(
+                0x21dcb7f000000000000000000000000000000000000000000000000000000000
+            ),
+            0x48914C788295b5db23aF2b5F0B3BE775C4eA9440,
+            hex"e8eda9df000000000000000000000000eb0d8736cc2c47882f112507cc8a3355d37d2413000000000000000000000000000000000000000000000000000000e8d4a51000000000000000000000000000eb0d8736cc2c47882f112507cc8a3355d37d24130000000000000000000000000000000000000000000000000000000000000000"
+        );
 
         vm.stopBroadcast();
 
