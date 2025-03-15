@@ -23,7 +23,7 @@ contract DeployScript is Script {
 
         address ATTESTATION_CENTER = 0xcE2c6cd7ab51837E6F0f2313D45D443F79097Dd5;
         address BASE_HYPERLANE_MAILBOX = 0x6966b0E55883d49BFB24539356a2f8A673E02039;
-        address SCROLL_POLICY_COORDINATOR = 0xB0d5E75D7592a15BA8fAD47698db8F06e928ECCb;
+        address SCROLL_POLICY_COORDINATOR = 0x2e22Bc79b58117015bF458045488E09aaa0bB794;
         uint32 SCROLL_DOMAIN_ID = 534351;
 
         console.log("Deployer: ", deployer);
@@ -51,15 +51,27 @@ contract DeployScript is Script {
         );
 
         // 4. Test CrosschainSender
+        // Create the task data using abi.encode
+        bytes memory taskData = abi.encode(
+            bytes32(
+                0x21dcb7f000000000000000000000000000000000000000000000000000000000
+            ), // txUUID
+            uint256(0), // agentId
+            uint256(1741979632561), // timestamp
+            "APPROVED", // status
+            "Policy 'AAVE Complete AVS Plugin' authorized transaction" // reason
+        );
+
+        // Create the TaskInfo struct
         IAttestationCenter.TaskInfo memory taskInfo = IAttestationCenter
             .TaskInfo({
-                proofOfTask: "test",
-                data: bytes("test data"),
+                proofOfTask: "QmZkk2Y7c9A9wKoWh3FGRPSRkfZPvEmRnnC5DuqHHESpBb",
+                data: taskData,
                 taskPerformer: address(0),
                 taskDefinitionId: 0
             });
 
-        // 5. Test CrosschainSender
+        // 5. Test CrosschainSender with real data
         crosschainSender.afterTaskSubmission(
             taskInfo,
             true,
