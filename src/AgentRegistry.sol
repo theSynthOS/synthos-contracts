@@ -11,7 +11,6 @@ import "./PolicyRegistry.sol";
  * @dev Handles agent registration, updates, and policy associations. Each agent
  *      is identified by their unique Dockerfile hash and must specify at least
  *      one policy that governs their actions.
- *
  */
 contract AgentRegistry {
     using EnumerableSet for EnumerableSet.Bytes32Set;
