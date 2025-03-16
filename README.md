@@ -1,66 +1,58 @@
-## Foundry
+# SynthOS Smart Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+### SynthOS is a Verifiable DeFAI Agent Marketplace that implements a cross-chain policy validation system between Base and Scroll networks. The system enables secure validation of agent transactions against predefined policies across different chains.
 
-Foundry consists of:
+### System Architecture
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+The system consists of four main smart contracts:
 
-## Documentation
+1. **PolicyRegistry.sol**
 
-https://book.getfoundry.sh/
+   - Manages the registration and storage of policies
+   - Defines rules and constraints for agent actions
+   - Handles policy lifecycle (creation, activation, deactivation)
 
-## Usage
+2. **AgentRegistry.sol**
 
-### Build
+   - Manages agent registration and metadata
+   - Links agents to their associated policies
+   - Tracks agent status and capabilities
 
-```shell
-$ forge build
-```
+3. **PolicyCoordinator.sol**
 
-### Test
+   - Core contract for transaction validation
+   - Coordinates between agents and their policies
+   - Validates transactions against time, function, and resource constraints
+   - Receives cross-chain messages from Base network
+   - Deployed on Scroll Sepolia
 
-```shell
-$ forge test
-```
+4. **CrosschainSender.sol**
+   - Handles cross-chain communication from Base to Scroll
+   - Integrates with Hyperlane for secure message passing
+   - Acts as an AVS Logic hook for task validation
+   - Deployed on Base Sepolia
 
-### Format
+### Cross-Chain Flow
 
-```shell
-$ forge fmt
-```
+![Image](https://github.com/user-attachments/assets/ccee5253-acdf-43c6-8cb6-f7efd1e12589)
 
-### Gas Snapshots
+### Key Features
 
-```shell
-$ forge snapshot
-```
+- **Cross-Chain Validation**: Enables policy validation across Base and Scroll networks
+- **Policy Management**: Flexible policy definition with time, function, and resource constraints
+- **Agent Registry**: Secure registration and management of DeFi agents
+- **Hyperlane Integration**: Secure cross-chain message passing
+- **Task Validation**: Comprehensive validation system for agent actions
 
-### Anvil
+### Deployed Contracts
 
-```shell
-$ anvil
-```
+- **Scroll Sepolia**:
 
-### Deploy
+  - PolicyRegistry: [`0xa7b0446a0fa8e8c503774987931e071e3ddf271a`](https://sepolia.scrollscan.com/address/0xa7b0446a0fa8e8c503774987931e071e3ddf271a#code)
+  - AgentRegistry: [`0x6ed02bf56beb79d47f734ee6bb4701b9789b4d5b`](https://sepolia.scrollscan.com/address/0x6ed02bf56beb79d47f734ee6bb4701b9789b4d5b#code)
+  - TaskRegistry: [`0x8eab19f680afcfd21f0d42353e06c85f3359024c`](https://sepolia.scrollscan.com/address/0x8eab19f680afcfd21f0d42353e06c85f3359024c#code)
+  - PolicyCoordinator: [`0x2e22bc79b58117015bf458045488e09aaa0bb794`](https://sepolia.scrollscan.com/address/0x2e22bc79b58117015bf458045488e09aaa0bb794#code)
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+- **Base Sepolia**:
 
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+  - CrosschainSender Contract (AVS Logic Hook): [`0x201cE172d07566BEa747D18848534f4d8aDBe69f`](https://base-sepolia.blockscout.com/address/0x201cE172d07566BEa747D18848534f4d8aDBe69f?tab=contract)
