@@ -9,10 +9,10 @@ import {ITaskRegistry} from "../src/interfaces/ITaskRegistry.sol";
 import {CrosschainSender} from "../src/CrosschainSender.sol";
 
 contract MockTaskRegistry is ITaskRegistry {
-    mapping(bytes32 => Task) private tasks;
+    mapping(string => Task) private tasks;
 
     function registerTask(
-        bytes32 uuid,
+        string memory uuid,
         address from,
         bytes memory callData
     ) external {
@@ -24,7 +24,7 @@ contract MockTaskRegistry is ITaskRegistry {
         });
     }
 
-    function getTask(bytes32 uuid) external view returns (Task memory) {
+    function getTask(string memory uuid) external view returns (Task memory) {
         return tasks[uuid];
     }
 }
@@ -53,8 +53,8 @@ contract PolicyCoordinatorTest is Test {
 
     address constant MAILBOX = address(0x1);
     uint32 constant ORIGIN_DOMAIN = 1;
-    bytes32 constant TASK_UUID =
-        0x43dca7b000000000000000000000000000000000000000000000000000000000;
+    string constant TASK_UUID =
+        "6e9a7ddb-679d-478e-a3d0-9de372857883";
     uint256 constant AGENT_ID = 123;
     address constant AGENT_ADDRESS = address(0x456);
 
@@ -398,7 +398,7 @@ contract PolicyCoordinatorTest is Test {
         assertEq(storedReason, reason, "Reason not stored correctly");
 
         // Verify agent task tracking
-        bytes32[] memory agentTasks = policyCoordinator.getAgentTasks(AGENT_ID);
+        string[] memory agentTasks = policyCoordinator.getAgentTasks(AGENT_ID);
         assertEq(agentTasks.length, 1, "Agent task not tracked");
         assertEq(agentTasks[0], TASK_UUID, "Wrong task UUID stored");
 
@@ -414,7 +414,7 @@ contract PolicyCoordinatorTest is Test {
         );
 
         // Verify latest task
-        (bytes32 latestUuid, uint256 latestTime) = policyCoordinator
+        (string memory latestUuid, uint256 latestTime) = policyCoordinator
             .getAgentLatestTask(AGENT_ID);
         assertEq(latestUuid, TASK_UUID, "Wrong latest task UUID");
         assertEq(latestTime, timestamp, "Wrong latest task timestamp");
@@ -422,7 +422,7 @@ contract PolicyCoordinatorTest is Test {
 
     function test_HandleMultipleValidations() public {
         // Register second task
-        bytes32 secondTaskUuid = bytes32(uint256(TASK_UUID) + 1);
+        string memory secondTaskUuid = "6e9a7ddb-679d-478e-a3d0-9de372857884";
         taskRegistry.registerTask(secondTaskUuid, AGENT_ADDRESS, hex"a415bcad");
 
         // First validation
@@ -452,7 +452,7 @@ contract PolicyCoordinatorTest is Test {
         vm.stopPrank();
 
         // Verify both tasks are tracked
-        bytes32[] memory agentTasks = policyCoordinator.getAgentTasks(AGENT_ID);
+        string[] memory agentTasks = policyCoordinator.getAgentTasks(AGENT_ID);
         assertEq(agentTasks.length, 2, "Not all tasks tracked");
 
         // Verify task history
@@ -463,7 +463,9 @@ contract PolicyCoordinatorTest is Test {
         assertEq(history[1].taskUuid, secondTaskUuid, "Second task UUID wrong");
 
         // Verify latest task is the second one
-        (bytes32 latestUuid, ) = policyCoordinator.getAgentLatestTask(AGENT_ID);
+        (string memory latestUuid, ) = policyCoordinator.getAgentLatestTask(
+            AGENT_ID
+        );
         assertEq(latestUuid, secondTaskUuid, "Latest task not updated");
     }
 

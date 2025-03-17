@@ -23,7 +23,7 @@ contract DeployScript is Script {
 
         address ATTESTATION_CENTER = 0xcE2c6cd7ab51837E6F0f2313D45D443F79097Dd5;
         address BASE_HYPERLANE_MAILBOX = 0x6966b0E55883d49BFB24539356a2f8A673E02039;
-        address SCROLL_POLICY_COORDINATOR = 0x2e22Bc79b58117015bF458045488E09aaa0bB794;
+        address SCROLL_POLICY_COORDINATOR = 0xbAdfD548E1D369633Cf23a53C7c8dC37607001e9;
         uint32 SCROLL_DOMAIN_ID = 534351;
 
         console.log("Deployer: ", deployer);
@@ -53,9 +53,7 @@ contract DeployScript is Script {
         // 4. Test CrosschainSender
         // Create the task data using abi.encode
         bytes memory taskData = abi.encode(
-            bytes32(
-                0x21dcb7f000000000000000000000000000000000000000000000000000000000
-            ), // txUUID
+            "6e9a7ddb-679d-478e-a3d0-9de372857885", // txUUID
             uint256(0), // agentId
             uint256(1741979632561), // timestamp
             "APPROVED", // status

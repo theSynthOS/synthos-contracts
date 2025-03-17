@@ -48,11 +48,11 @@ The system consists of four main smart contracts:
 
 - **Scroll Sepolia**:
 
-  - PolicyRegistry: [`0xa7b0446a0fa8e8c503774987931e071e3ddf271a`](https://sepolia.scrollscan.com/address/0xa7b0446a0fa8e8c503774987931e071e3ddf271a#code)
-  - AgentRegistry: [`0x6ed02bf56beb79d47f734ee6bb4701b9789b4d5b`](https://sepolia.scrollscan.com/address/0x6ed02bf56beb79d47f734ee6bb4701b9789b4d5b#code)
+  - PolicyRegistry: [`0x3579D1B3606d7401A524F78ba8565374639348Fd`](https://sepolia.scrollscan.com/address/0x3579D1B3606d7401A524F78ba8565374639348Fd#code)
+  - AgentRegistry: [`0xd97d57bae995259fe1Eb040a63A02F86a4398285`](https://sepolia.scrollscan.com/address/0xd97d57bae995259fe1Eb040a63A02F86a4398285#code)
   - TaskRegistry: [`0x5e38f31693CcAcFCA4D8b70882d8b696cDc24273`](https://sepolia.scrollscan.com/address/0x5e38f31693CcAcFCA4D8b70882d8b696cDc24273#code)
-  - PolicyCoordinator: [`0x2e22bc79b58117015bf458045488e09aaa0bb794`](https://sepolia.scrollscan.com/address/0x2e22bc79b58117015bf458045488e09aaa0bb794#code)
+  - PolicyCoordinator: [`0xbAdfD548E1D369633Cf23a53C7c8dC37607001e9`](https://sepolia.scrollscan.com/address/0xbAdfD548E1D369633Cf23a53C7c8dC37607001e9#code)
 
 - **Base Sepolia**:
 
-  - CrosschainSender Contract (AVS Logic Hook): [`0x201cE172d07566BEa747D18848534f4d8aDBe69f`](https://base-sepolia.blockscout.com/address/0x201cE172d07566BEa747D18848534f4d8aDBe69f?tab=contract)
+  - CrosschainSender Contract (AVS Logic Hook): [`0xd97d57bae995259fe1Eb040a63A02F86a4398285`](https://base-sepolia.blockscout.com/address/0xd97d57bae995259fe1Eb040a63A02F86a4398285?tab=contract)

@@ -35,7 +35,7 @@ contract CrosschainSender is IAvsLogic {
     );
 
     event TaskDataParsed(
-        bytes32 txUUID,
+        string txUUID,
         uint256 agentId,
         uint256 timestamp,
         string status,
@@ -71,14 +71,14 @@ contract CrosschainSender is IAvsLogic {
 
         // Decode the structured data directly
         (
-            bytes32 txUUID,
+            string memory txUUID,
             uint256 agentId,
             uint256 timestamp,
             string memory status,
             string memory reason
         ) = abi.decode(
                 _taskInfo.data,
-                (bytes32, uint256, uint256, string, string)
+                (string, uint256, uint256, string, string)
             );
 
         // Emit the parsed data

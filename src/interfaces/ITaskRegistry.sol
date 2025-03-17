@@ -11,9 +11,9 @@ interface ITaskRegistry {
     }
 
     function registerTask(
-        bytes32 uuid,
+        string memory uuid,
         address to,
         bytes calldata callData
     ) external;
-    function getTask(bytes32 uuid) external view returns (Task memory);
+    function getTask(string memory uuid) external view returns (Task memory);
 }

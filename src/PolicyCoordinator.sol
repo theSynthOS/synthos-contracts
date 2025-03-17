@@ -18,9 +18,6 @@ import {ITaskRegistry} from "./interfaces/ITaskRegistry.sol";
  *
  */
 contract PolicyCoordinator is IMessageRecipient {
-    using TypeCasts for bytes32;
-    using EnumerableSet for EnumerableSet.Bytes32Set;
-
     AgentRegistry public agentRegistry;
     PolicyRegistry public policyRegistry;
     ITaskRegistry public taskRegistry;
@@ -40,7 +37,7 @@ contract PolicyCoordinator is IMessageRecipient {
 
     // New struct for agent task tracking
     struct AgentTaskDetails {
-        bytes32 taskUuid;
+        string taskUuid;
         uint256 receivedAt;
     }
 
@@ -57,22 +54,22 @@ contract PolicyCoordinator is IMessageRecipient {
     }
 
     // Existing mappings
-    mapping(bytes32 => TaskValidationDetails) public taskValidations;
-    mapping(uint256 => EnumerableSet.Bytes32Set) private _agentTasks;
+    mapping(string => TaskValidationDetails) public taskValidations;
+    mapping(uint256 => string[]) private _agentTasks;
 
     // New mapping for agent task history
     mapping(uint256 => AgentTaskDetails[]) public agentTaskHistory;
 
     // Events
     event TransactionValidated(
-        bytes32 indexed taskUuid,
+        string indexed taskUuid,
         uint256 indexed agentId,
         string status,
         string reason
     );
     event PolicyValidated(
         uint256 indexed policyId,
-        bytes32 indexed taskUuid,
+        string indexed taskUuid,
         bool isValid
     );
     event TaskDataReceived(
@@ -84,11 +81,11 @@ contract PolicyCoordinator is IMessageRecipient {
     // Add event for task receipt
     event TaskReceived(
         uint256 indexed agentId,
-        bytes32 indexed taskUuid,
+        string indexed taskUuid,
         uint256 receivedAt
     );
 
-    event TaskUUIDExtracted(bytes32 taskUuid);
+    event TaskUUIDExtracted(string taskUuid);
     event AgentIdExtracted(uint256 agentId);
 
     // Errors
@@ -409,14 +406,14 @@ contract PolicyCoordinator is IMessageRecipient {
         // Decode the structured data
         (
             string memory proofOfTask,
-            bytes32 taskUuid,
+            string memory taskUuid,
             uint256 agentId,
             uint256 timestamp,
             string memory status,
             string memory reason
         ) = abi.decode(
                 _message,
-                (string, bytes32, uint256, uint256, string, string)
+                (string, string, uint256, uint256, string, string)
             );
 
         // Store validation status using taskUuid directly
@@ -427,7 +424,7 @@ contract PolicyCoordinator is IMessageRecipient {
         });
 
         // Add task to agent's set
-        _agentTasks[agentId].add(taskUuid);
+        _agentTasks[agentId].push(taskUuid);
 
         // Add to agent's task history
         agentTaskHistory[agentId].push(
@@ -445,7 +442,7 @@ contract PolicyCoordinator is IMessageRecipient {
      * @return reason Reason for the status
      */
     function getValidationStatus(
-        bytes32 taskUuid
+        string memory taskUuid
     ) external view returns (string memory status, string memory reason) {
         TaskValidationDetails memory validation = taskValidations[taskUuid];
         return (validation.status, validation.reason);
@@ -457,8 +454,8 @@ contract PolicyCoordinator is IMessageRecipient {
      */
     function getAgentTasks(
         uint256 agentId
-    ) external view returns (bytes32[] memory) {
-        return _agentTasks[agentId].values();
+    ) external view returns (string[] memory) {
+        return _agentTasks[agentId];
     }
 
     /**
@@ -477,12 +474,12 @@ contract PolicyCoordinator is IMessageRecipient {
      */
     function getAgentLatestTask(
         uint256 agentId
-    ) external view returns (bytes32 taskUuid, uint256 receivedAt) {
+    ) external view returns (string memory taskUuid, uint256 receivedAt) {
         AgentTaskDetails[] memory history = agentTaskHistory[agentId];
         if (history.length > 0) {
             AgentTaskDetails memory latest = history[history.length - 1];
             return (latest.taskUuid, latest.receivedAt);
         }
-        return (bytes32(0), 0);
+        return ("", 0);
     }
 }
