@@ -52,6 +52,7 @@ The system consists of four main smart contracts:
   - AgentRegistry: [`0xd97d57bae995259fe1Eb040a63A02F86a4398285`](https://sepolia.scrollscan.com/address/0xd97d57bae995259fe1Eb040a63A02F86a4398285#code)
   - TaskRegistry: [`0x5e38f31693CcAcFCA4D8b70882d8b696cDc24273`](https://sepolia.scrollscan.com/address/0x5e38f31693CcAcFCA4D8b70882d8b696cDc24273#code)
   - PolicyCoordinator: [`0xbAdfD548E1D369633Cf23a53C7c8dC37607001e9`](https://sepolia.scrollscan.com/address/0xbAdfD548E1D369633Cf23a53C7c8dC37607001e9#code)
+  - Faucet: [`0x602396FFA43b7FfAdc80e01c5A11fc74F3BA59f5`](https://sepolia.scrollscan.com/address/0x602396FFA43b7FfAdc80e01c5A11fc74F3BA59f5#code)
 
 - **Base Sepolia**:
 
